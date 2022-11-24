@@ -1,21 +1,28 @@
 from aiohttp import ClientSession, ClientTimeout
-from typing import List
 
-from . import tasmota_types as t
+from . import tasmota_types
+
 
 class AuthenticationError(Exception):
     """Exception raised when at tasmota device authentication failed."""
+
     pass
+
+
 class CommandError(Exception):
     """Raised when a command failed."""
+
     pass
+
+
 # ConnectionError and ValueError are also used
 
 
-class TasmotaDevice():
-
+class TasmotaDevice:
     @classmethod
-    async def connect(cls, url: str, username: str = None, password: str = None, timeout: int = 30):
+    async def connect(
+        cls, url: str, username: str = None, password: str = None, timeout: int = 30
+    ):
         """Creates a TasmotaDevice instance. If a webUI password is set, both username and password are required. The username is usually 'admin'"""
         self = TasmotaDevice()
 
@@ -23,41 +30,54 @@ class TasmotaDevice():
 
         if (username is None) != (password is None):
             raise ValueError(
-                "Username and password must either be both not set or both set!")
+                "Username and password must either be both not set or both set!"
+            )
 
         # Remove trailing slashes from url and add http if necessary
-        self._url = url.rstrip('/')
-        if not self._url.startswith('http://') and not self._url.startswith('https://'):
-            self._url = 'http://' + self._url
+        self._url = url.rstrip("/")
+        if not self._url.startswith("http://") and not self._url.startswith("https://"):
+            self._url = "http://" + self._url
 
-        self._login_info = {'user': username,
-                        'password': password} if password is not None else {}
+        self._login_info = (
+            {"user": username, "password": password} if password is not None else {}
+        )
 
         # Test provided configuration
         try:
-            await self.getStatus()
-        except Exception as e:          
-            if 'Need user=<username>&password=<password>' in str(e):
-                if password is None: raise AuthenticationError('Username (usually admin) and password are required') from None
-                else: raise AuthenticationError('Username and / or password are invalid') from None
+            await self.get_status()
+        except Exception as e:
+            if "Need user=<username>&password=<password>" in str(e):
+                if password is None:
+                    raise AuthenticationError(
+                        "Username (usually admin) and password are required"
+                    ) from None
+                else:
+                    raise AuthenticationError(
+                        "Username and / or password are invalid"
+                    ) from None
             else:
-                raise ConnectionError(f'Failed to connect to tasmota device: {str(e)}') from None
-        
+                raise ConnectionError(
+                    f"Failed to connect to tasmota device: {str(e)}"
+                ) from None
 
         return self
 
-    async def sendRawRequest(self, command: str) -> dict:
+    async def send_raw_request(self, command: str) -> dict:
         """Send an custom text command to the Tasmota device. The answer (JSON data) will be returned."""
         async with ClientSession(timeout=self._timeout) as session:
-            params = {'cmnd': str(command), **self._login_info}
+            params = {"cmnd": str(command), **self._login_info}
             # print('Sent command: ', params['cmnd'])
             async with session.get(f"{self._url}/cm", params=params) as resp:
-                if resp.status != 200: raise CommandError(f'Unexpected HTTP status {resp.status}: {resp.text()}')
+                if resp.status != 200:
+                    raise CommandError(
+                        f"Unexpected HTTP status {resp.status}: {resp.text()}"
+                    )
                 try:
                     return await resp.json()
                 except:
-                    raise CommandError(f'Non-JSON data returned by device: {resp.text()}') from None
-
+                    raise CommandError(
+                        f"Non-JSON data returned by device: {resp.text()}"
+                    ) from None
 
     #####################################################################
     ########################   Wrapper Methods   ########################
@@ -65,13 +85,14 @@ class TasmotaDevice():
 
     ######   Control   ######
 
-    async def getBlinkCount(self) -> int:
+    async def get_blink_count(self) -> int:
         """Get the blink count (number of power toggles)."""
-        response = await self.sendRawRequest('BlinkCount')
-        if response.get('BlinkCount') is None: raise CommandError(f'Command failed: {response}')
-        return response.get('BlinkCount')
+        response = await self.send_raw_request("BlinkCount")
+        if response.get("BlinkCount") is None:
+            raise CommandError(f"Command failed: {response}")
+        return response.get("BlinkCount")
 
-    async def setBlinkCount(self, value: int) -> int:
+    async def set_blink_count(self, value: int) -> int:
         """Set the blink count (number of power toggles).
 
         0 = blink many times before restoring power state
@@ -80,20 +101,21 @@ class TasmotaDevice():
         value = int(value)
 
         if value < 0 or value > 32000:
-            raise ValueError('Value must be between 0 and 32000')
+            raise ValueError("Value must be between 0 and 32000")
 
-        response = await self.sendRawRequest(f'BlinkCount {value}')
-        if response.get('BlinkCount') != value: raise CommandError(f'Command failed: {response}')
+        response = await self.send_raw_request(f"BlinkCount {value}")
+        if response.get("BlinkCount") != value:
+            raise CommandError(f"Command failed: {response}")
         return value
 
-
-    async def getBlinkTime(self) -> int:
+    async def get_blink_time(self) -> int:
         """Get the blink time (duration of power toggles)."""
-        response = await self.sendRawRequest('BlinkTime')
-        if response.get('BlinkTime') is None: raise CommandError(f'Command failed: {response}')
-        return response.get('BlinkTime')
+        response = await self.send_raw_request("BlinkTime")
+        if response.get("BlinkTime") is None:
+            raise CommandError(f"Command failed: {response}")
+        return response.get("BlinkTime")
 
-    async def setBlinkTime(self, value: int) -> int:
+    async def set_blink_time(self, value: int) -> int:
         """Set the blink time (duration of power toggles).
 
         2..3600 = set duration of blinks in 0.1s increments (10 = 1s)
@@ -103,26 +125,35 @@ class TasmotaDevice():
         if value < 2 or value > 3600:
             raise ValueError("Value must be between 2 and 3600")
 
-        response = await self.sendRawRequest(f'BlinkTime {value}')
-        if response.get('BlinkTime') != value: raise CommandError(f'Command failed: {response}')
+        response = await self.send_raw_request(f"BlinkTime {value}")
+        if response.get("BlinkTime") != value:
+            raise CommandError(f"Command failed: {response}")
         return value
 
-
-    async def getPower(self, output: t.PowerOutputType = t.PowerOutputType.OUTPUT_1) -> bool:
+    async def get_power(
+        self, output: tasmota_types.PowerOutputType = tasmota_types.PowerOutputType.OUTPUT_1
+    ) -> any:
         """Get the current power state of the power outputs on the device"""
-        if not t._isValidEnumValue(output, t.PowerOutputType):
+        if not tasmota_types._isValidEnumValue(output, tasmota_types.PowerOutputType):
             raise ValueError(f"Received invalid value for 'output'!")
 
         output = output.value
+        power_output = f"POWER{output}"
 
-        response = await self.sendRawRequest(f'Power{output}')
-        if response.get('POWER') != 'ON' and response.get('POWER') != 'OFF': raise CommandError(f'Command failed: {response}')
-        return response.get('POWER') == 'ON'
+        response = await self.send_raw_request(power_output)
+        if output == "0":
+            return response
 
-    async def setPower(self, value: t.PowerType, output: t.PowerOutputType = t.PowerOutputType.OUTPUT_1) -> bool:
+        if response.get(power_output) != "ON" and response.get(power_output) != "OFF":
+            raise CommandError(f"Command failed: {response}")
+        return response.get(power_output)
+
+    async def set_power(
+        self, value: tasmota_types.PowerType, output: tasmota_types.PowerOutputType = tasmota_types.PowerOutputType.OUTPUT_1
+    ) -> bool:
         """Control the power state of the power outputs on the device (also restarts PulseTime).
 
-        Available power types:
+        Available power tasmota_types:
         PowerType.OFF = turn the output off
         PowerType.ON = turn the output on
         PowerType.TOGGLE = if output is ON switch to OFF and vice versa
@@ -131,56 +162,72 @@ class TasmotaDevice():
         """
 
         # Validate input
-        if not t._isValidEnumValue(value, t.PowerType):
+        if not tasmota_types._isValidEnumValue(value, tasmota_types.PowerType):
             raise ValueError(f"Received invalid value for 'value'!")
-        if not t._isValidEnumValue(output, t.PowerOutputType):
+        if not tasmota_types._isValidEnumValue(output, tasmota_types.PowerOutputType):
             raise ValueError(f"Received invalid value for 'output'!")
-        if (value is t.PowerType.BLINK or value is t.PowerType.BLINK_OFF) and output is t.PowerOutputType.ALL_OUTPUTS:
+        if (
+            value is tasmota_types.PowerType.BLINK or value is tasmota_types.PowerType.BLINK_OFF
+        ) and output is tasmota_types.PowerOutputType.ALL_OUTPUTS:
             raise ValueError(
-                f"Power type 'BLINK' and 'BLINK_OFF' can only be set for specific outputs, not all!")
+                f"Power type 'BLINK' and 'BLINK_OFF' can only be set for specific outputs, not all!"
+            )
 
         parsedValue = value.value
         output = output.value
 
-        response = await self.sendRawRequest(f'Power{output} {parsedValue}')
-        if response.get('POWER') is None: raise CommandError(f'Command failed: {response}')
-        if value is t.PowerType.OFF:
-            if response.get('POWER') != 'OFF': raise CommandError(f'Command failed: {response}')
+        response = await self.send_raw_request(f"Power{output} {parsedValue}")
+        if response.get("POWER") is None:
+            raise CommandError(f"Command failed: {response}")
+        if value is tasmota_types.PowerType.OFF:
+            if response.get("POWER") != "OFF":
+                raise CommandError(f"Command failed: {response}")
             return False
-        elif value is t.PowerType.ON:
-            if response.get('POWER') != 'ON': raise CommandError(f'Command failed: {response}')
+        elif value is tasmota_types.PowerType.ON:
+            if response.get("POWER") != "ON":
+                raise CommandError(f"Command failed: {response}")
             return True
-        elif value is t.PowerType.TOGGLE:
-            if response.get('POWER') != 'ON' and response.get('POWER') != 'OFF': raise CommandError(f'Command failed: {response}')
-            return response.get('POWER') == 'ON'
-        elif value is t.PowerType.BLINK:
-            if response.get('POWER') != 'Blink ON': raise CommandError(f'Command failed: {response}')
+        elif value is tasmota_types.PowerType.TOGGLE:
+            if response.get("POWER") != "ON" and response.get("POWER") != "OFF":
+                raise CommandError(f"Command failed: {response}")
+            return response.get("POWER") == "ON"
+        elif value is tasmota_types.PowerType.BLINK:
+            if response.get("POWER") != "Blink ON":
+                raise CommandError(f"Command failed: {response}")
             return True
-        elif value is t.PowerType.BLINK_OFF:
-            if response.get('POWER') != 'Blink OFF': raise CommandError(f'Command failed: {response}')
+        elif value is tasmota_types.PowerType.BLINK_OFF:
+            if response.get("POWER") != "Blink OFF":
+                raise CommandError(f"Command failed: {response}")
             return True
 
     ######   Management   ######
 
-    async def getFriendlyName(self, output: t.FriendlyNameOutputType = t.FriendlyNameOutputType.OUTPUT_1) -> str:
+    async def get_friendly_name(
+        self, output: tasmota_types.FriendlyNameOutputType = tasmota_types.FriendlyNameOutputType.OUTPUT_1
+    ) -> str:
         """Get the friendly name of a power output."""
-        if not t._isValidEnumValue(output, t.FriendlyNameOutputType):
+        if not tasmota_types._isValidEnumValue(output, tasmota_types.FriendlyNameOutputType):
             raise ValueError(f"Received invalid value for 'output'!")
 
         output = output.value
 
-        response = await self.sendRawRequest(f'FriendlyName{output}')
-        if response.get(f'FriendlyName{output}') is None: raise CommandError(f'Command failed: {response}')
-        return response.get(f'FriendlyName{output}')
+        response = await self.send_raw_request(f"FriendlyName{output}")
+        if response.get(f"FriendlyName{output}") is None:
+            raise CommandError(f"Command failed: {response}")
+        return response.get(f"FriendlyName{output}")
 
-    async def setFriendlyName(self, value: str, output: t.FriendlyNameOutputType = t.FriendlyNameOutputType.OUTPUT_1) -> str:
-        """Set the friendly name of a power output.  
-        
+    async def set_friendly_name(
+        self,
+        value: str,
+        output: tasmota_types.FriendlyNameOutputType = tasmota_types.FriendlyNameOutputType.OUTPUT_1,
+    ) -> str:
+        """Set the friendly name of a power output.
+
         Possible values:
         1 = Reset friendly name to firmware default
         <value> = set friendly name (32 char limit)
         """
-        if not t._isValidEnumValue(output, t.FriendlyNameOutputType):
+        if not tasmota_types._isValidEnumValue(output, tasmota_types.FriendlyNameOutputType):
             raise ValueError(f"Received invalid value for 'output'!")
 
         value = str(value)
@@ -189,15 +236,17 @@ class TasmotaDevice():
         if len(value) > 32:
             raise ValueError("Name must be at most 32 characters long")
 
-        response = await self.sendRawRequest(f'FriendlyName{output} {value}')
-        if response.get(f'FriendlyName{output}') != value: raise CommandError(f'Command failed: {response}')
+        response = await self.send_raw_request(f"FriendlyName{output} {value}")
+        if response.get(f"FriendlyName{output}") != value:
+            raise CommandError(f"Command failed: {response}")
         return value
 
-
-    async def getStatus(self, statusType: t.StatusType = t.StatusType.ABBREVIATED) -> dict:
+    async def get_status(
+        self, statusType: tasmota_types.StatusType = tasmota_types.StatusType.ABBREVIATED
+    ) -> dict:
         """Command to get status information about the Tasmota device.
 
-        Available status types:
+        Available status tasmota_types:
         ABBREVIATED = show abbreviated status information
         ALL = show all status information
         DEVICE_PARAMETERS = show device parameters information
@@ -212,16 +261,13 @@ class TasmotaDevice():
         TELE_PERIOD = show information equal to TelePeriod state message
         STACK_DUMP = in case of crash to dump the call stack saved in RT memory
         """
-        if not t._isValidEnumValue(statusType, t.StatusType):
+        if not tasmota_types._isValidEnumValue(statusType, tasmota_types.StatusType):
             raise ValueError(f"Received invalid value for 'statusType'!")
 
         statusType = statusType.value
 
-        response = await self.sendRawRequest(f'Status {statusType}')
+        response = await self.send_raw_request(f"Status {statusType}")
         # If first key does not include substring "Status"
-        if 'Status' not in next(iter(response)): raise CommandError(f'Command failed: {response}')
+        if "Status" not in next(iter(response)):
+            raise CommandError(f"Command failed: {response}")
         return response
-    
-
-
-

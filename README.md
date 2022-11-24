@@ -15,20 +15,22 @@ import asyncio
 from tasmotadevicecontroller import TasmotaDevice
 from tasmotadevicecontroller import tasmota_types as t
 
+
 async def main():
     device = await TasmotaDevice.connect('192.168.10.21')
 
     # Get friendly name (of first output, which is the default output)
-    nameResult = await device.getFriendlyName()
+    nameResult = await device.get_friendly_name()
     print(nameResult)  # Returns 'My Tasmota Plug'
 
     # Get power of first output
-    getResult = await device.getPower()
+    getResult = await device.get_power()
     print(getResult)  # Returns True (on)
 
     # Set power of first output to on
-    setResult = await device.setPower(t.PowerType.TOGGLE)
+    setResult = await device.set_power(t.PowerType.TOGGLE)
     print(setResult)  # Returns True or False (depending if the device was switched on or off)
+
 
 loop = asyncio.get_event_loop()
 loop.run_until_complete(main())
