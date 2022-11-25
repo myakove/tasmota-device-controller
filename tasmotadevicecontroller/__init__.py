@@ -173,30 +173,31 @@ class TasmotaDevice:
                 f"Power type 'BLINK' and 'BLINK_OFF' can only be set for specific outputs, not all!"
             )
 
-        parsedValue = value.value
+        parsed_value = value.value
         output = output.value
+        power_output = f"POWER{output}"
 
-        response = await self.send_raw_request(f"Power{output} {parsedValue}")
-        if response.get("POWER") is None:
+        response = await self.send_raw_request(f"{power_output} {parsed_value}")
+        if response.get(power_output) is None:
             raise CommandError(f"Command failed: {response}")
         if value is tasmota_types.PowerType.OFF:
-            if response.get("POWER") != "OFF":
+            if response.get(power_output) != "OFF":
                 raise CommandError(f"Command failed: {response}")
             return False
         elif value is tasmota_types.PowerType.ON:
-            if response.get("POWER") != "ON":
+            if response.get(power_output) != "ON":
                 raise CommandError(f"Command failed: {response}")
             return True
         elif value is tasmota_types.PowerType.TOGGLE:
-            if response.get("POWER") != "ON" and response.get("POWER") != "OFF":
+            if response.get(power_output) != "ON" and response.get("POWER") != "OFF":
                 raise CommandError(f"Command failed: {response}")
-            return response.get("POWER") == "ON"
+            return response.get(power_output) == "ON"
         elif value is tasmota_types.PowerType.BLINK:
-            if response.get("POWER") != "Blink ON":
+            if response.get(power_output) != "Blink ON":
                 raise CommandError(f"Command failed: {response}")
             return True
         elif value is tasmota_types.PowerType.BLINK_OFF:
-            if response.get("POWER") != "Blink OFF":
+            if response.get(power_output) != "Blink OFF":
                 raise CommandError(f"Command failed: {response}")
             return True
 
