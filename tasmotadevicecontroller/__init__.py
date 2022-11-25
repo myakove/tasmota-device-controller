@@ -183,7 +183,7 @@ class TasmotaDevice:
         if value is tasmota_types.PowerType.OFF:
             if response.get(power_output) != "OFF":
                 raise CommandError(f"Command failed: {response}")
-            return False
+            return True
         elif value is tasmota_types.PowerType.ON:
             if response.get(power_output) != "ON":
                 raise CommandError(f"Command failed: {response}")
